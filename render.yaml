@@ -11,3 +11,9 @@ services:
         value: "1"
       - key: FLASK_ENV
         value: production
+      - key: PDF_RENDERER
+        value: pymupdf
+      - key: MAX_PDF_PAGES
+        value: "3"
+      - key: PDF_RENDER_ZOOM
+        value: "1.5"

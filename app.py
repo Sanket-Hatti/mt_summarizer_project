@@ -7,6 +7,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 import os
+import json
 from werkzeug.utils import secure_filename
 import io
 import tempfile
@@ -35,9 +36,13 @@ except Exception:
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['RESULTS_FOLDER'] = 'results/'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['RESULTS_FOLDER'], exist_ok=True)
+
+MAX_PDF_PAGES = int(os.environ.get('MAX_PDF_PAGES', '10'))
 
 # Ensure Flask has a SECRET_KEY for session/flash. In production set the SECRET_KEY env var.
 # Fallback: generate a random key for development (note: this will change on each restart).
@@ -58,13 +63,48 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 
+def save_page_result(data):
+    """Store large results on disk; redirect with a short id (avoids huge session cookies)."""
+    rid = secrets.token_urlsafe(12)
+    path = os.path.join(app.config['RESULTS_FOLDER'], f'{rid}.json')
+    with open(path, 'w', encoding='utf-8') as fh:
+        json.dump(data, fh)
+    return rid
 
+
+def load_page_result(rid):
+    if not rid:
+        return {}
+    safe = secure_filename(rid)
+    if safe != rid:
+        return {}
+    path = os.path.join(app.config['RESULTS_FOLDER'], f'{rid}.json')
+    if not os.path.exists(path):
+        return {}
+    with open(path, 'r', encoding='utf-8') as fh:
+        return json.load(fh)
 
 
 # Home page
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    page = load_page_result(request.args.get('r'))
+    return render_template(
+        'index.html',
+        ocr_text=page.get('ocr_text'),
+        pdf_text=page.get('pdf_text'),
+        translated_text=page.get('translated_text'),
+        summary_text=page.get('summary_text'),
+        source_preview=page.get('source_preview'),
+    )
+
+
+@app.route('/ocr', methods=['GET'])
+@app.route('/pdf', methods=['GET'])
+@app.route('/translate', methods=['GET'])
+@app.route('/summarize', methods=['GET'])
+def form_get_redirect():
+    return redirect(url_for('index'))
 
 
 @app.route('/download_text', methods=['POST'])
@@ -93,7 +133,8 @@ def ocr():
     except Exception as e:
         text = ''
         flash('OCR error: %s' % str(e))
-    return render_template('index.html', ocr_text=text, source_preview=filename)
+    rid = save_page_result({'ocr_text': text, 'source_preview': filename})
+    return redirect(url_for('index', r=rid))
 
 
 @app.route('/pdf', methods=['POST'])
@@ -117,7 +158,10 @@ def pdf():
         try:
             with open(filepath, 'rb') as fh:
                 reader = PyPDF2.PdfReader(fh)
-                for page in reader.pages:
+                pages = reader.pages[:MAX_PDF_PAGES]
+                if len(reader.pages) > MAX_PDF_PAGES:
+                    flash('PDF has %d pages; processing first %d to stay within time limits.' % (len(reader.pages), MAX_PDF_PAGES))
+                for page in pages:
                     try:
                         ptext = page.extract_text() or ''
                     except Exception:
@@ -142,6 +186,9 @@ def pdf():
                     images = convert_from_bytes(pdf_bytes, dpi=200, poppler_path=POPPLER_PATH)
                 else:
                     images = convert_from_bytes(pdf_bytes, dpi=200)
+                if len(images) > MAX_PDF_PAGES:
+                    flash('PDF has %d pages; processing first %d to stay within time limits.' % (len(images), MAX_PDF_PAGES))
+                    images = images[:MAX_PDF_PAGES]
                 for img in images:
                     try:
                         ptext = pytesseract.image_to_string(img)
@@ -162,9 +209,13 @@ def pdf():
             else:
                 try:
                     doc = fitz.open(filepath)
+                    page_count = doc.page_count
+                    pages_to_read = min(page_count, MAX_PDF_PAGES)
+                    if page_count > MAX_PDF_PAGES:
+                        flash('PDF has %d pages; processing first %d to stay within time limits.' % (page_count, MAX_PDF_PAGES))
                     zoom = float(os.environ.get('PDF_RENDER_ZOOM', 2.0))
                     mat = fitz.Matrix(zoom, zoom)
-                    for pno in range(doc.page_count):
+                    for pno in range(pages_to_read):
                         page = doc.load_page(pno)
                         pix = page.get_pixmap(matrix=mat, alpha=False)
                         img_data = pix.tobytes('png')
@@ -189,7 +240,8 @@ def pdf():
     full_text = '\n\n'.join([t for t in extracted_text if t])
     if not full_text:
         flash('No text could be extracted from the provided PDF. If this is a scanned PDF, ensure Poppler and Tesseract are installed (see README).')
-    return render_template('index.html', pdf_text=full_text, source_preview=filename)
+    rid = save_page_result({'pdf_text': full_text, 'source_preview': filename})
+    return redirect(url_for('index', r=rid))
 
 
 @app.route('/translate', methods=['POST'])
@@ -205,7 +257,8 @@ def translate():
     except Exception as e:
         translated_text = ''
         flash('Translation error: %s' % str(e))
-    return render_template('index.html', translated_text=translated_text)
+    rid = save_page_result({'translated_text': translated_text})
+    return redirect(url_for('index', r=rid))
 
 
 @app.route('/summarize', methods=['POST'])
@@ -227,7 +280,8 @@ def summarize():
     except Exception as e:
         summary_text = ''
         flash('Summarization error: %s' % str(e))
-    return render_template('index.html', summary_text=summary_text)
+    rid = save_page_result({'summary_text': summary_text})
+    return redirect(url_for('index', r=rid))
 
 
 if __name__ == '__main__':
