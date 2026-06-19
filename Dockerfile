@@ -17,13 +17,14 @@ WORKDIR /app
 
 # Copy requirements first for caching
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 
 # Copy application source
 COPY . /app
 
-# Ensure uploads directory exists
-RUN mkdir -p /app/uploads
+# Ensure runtime directories exist
+RUN mkdir -p /app/uploads /app/results
 
 # Environment
 ENV PYTHONUNBUFFERED=1

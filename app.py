@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_file,
 import pytesseract
 from PIL import Image
 import numpy  # must load before sumy so LSA summarizer sees NumPy
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -56,7 +56,17 @@ if os.environ.get('TESSERACT_CMD'):
 
 POPPLER_PATH = os.environ.get('POPPLER_PATH')  # optional
 
-translator = Translator()
+
+def ensure_nltk_data():
+    import nltk
+    for package in ('punkt', 'punkt_tab'):
+        try:
+            nltk.data.find(f'tokenizers/{package}')
+        except LookupError:
+            nltk.download(package, quiet=True)
+
+
+ensure_nltk_data()
 
 
 def allowed_file(filename):
@@ -252,8 +262,7 @@ def translate():
         flash('Missing text or target language')
         return redirect(url_for('index'))
     try:
-        translated = translator.translate(text, dest=dest_lang)
-        translated_text = translated.text
+        translated_text = GoogleTranslator(source='auto', target=dest_lang).translate(text)
     except Exception as e:
         translated_text = ''
         flash('Translation error: %s' % str(e))
