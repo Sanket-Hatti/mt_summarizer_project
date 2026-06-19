@@ -1,0 +1,58 @@
+name: CI / Build Docker image and optional deploy
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mt_summarizer:latest
+            ghcr.io/${{ github.repository_owner }}/mt_summarizer:${{ github.sha }}
+
+  deploy-fly:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ secrets.FLY_API_TOKEN != '' && secrets.FLY_APP_NAME != '' }}
+    steps:
+      - name: Install flyctl
+        run: curl -L https://fly.io/install.sh | sh
+
+      - name: Authenticate flyctl
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          ~/.fly/bin/flyctl auth login --access-token "$FLY_API_TOKEN"
+
+      - name: Deploy image to Fly
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/mt_summarizer:${{ github.sha }}
+        run: |
+          ~/.fly/bin/flyctl deploy --image "$IMAGE" --app ${{ secrets.FLY_APP_NAME }}

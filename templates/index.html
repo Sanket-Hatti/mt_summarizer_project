@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MT Summarizer</title>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    </head>
+    <body>
+            <header class="topbar">
+                <div class="brand">Efficient and Effective Translation — English to Dravidian Languages</div>
+                <div class="tag">OCR • Translate • Summarize</div>
+            </header>
+
+        <main class="wrap">
+                    {% with messages = get_flashed_messages() %}
+                        {% if messages %}
+                            <div class="flash">
+                                {% for msg in messages %}
+                                    <div class="flash-item">{{ msg }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+            <section class="cards">
+                <div class="left-column">
+                <div class="card">
+                    <h3>Image OCR</h3>
+                    <form action="/ocr" method="post" enctype="multipart/form-data">
+                        <input type="file" name="image" accept="image/*" required>
+                        <div class="actions">
+                            <button class="btn primary" type="submit">Extract Text</button>
+                        </div>
+                    </form>
+                    {% if ocr_text %}
+                        <div class="output show">
+                            <div class="output-header">OCR Result
+                                <button class="btn small" onclick="copyText('ocr_text')">Copy</button>
+                                <form method="post" action="/download_text" style="display:inline">
+                                    <input type="hidden" name="text" id="ocr_text_input" value="{{ ocr_text|e }}">
+                                    <input type="hidden" name="filename" value="ocr.txt">
+                                    <button class="btn small" type="submit">Download</button>
+                                </form>
+                            </div>
+                            <pre id="ocr_text">{{ ocr_text }}</pre>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h3>PDF (Text or Scanned)</h3>
+                    <form action="/pdf" method="post" enctype="multipart/form-data">
+                        <input type="file" name="pdf" accept="application/pdf" required>
+                        <div class="actions">
+                            <button class="btn primary" type="submit">Extract from PDF</button>
+                        </div>
+                    </form>
+                    {% if pdf_text %}
+                        <div class="output show">
+                            <div class="output-header">PDF Text
+                                <button class="btn small" onclick="copyText('pdf_text')">Copy</button>
+                                <form method="post" action="/download_text" style="display:inline">
+                                    <input type="hidden" name="text" id="pdf_text_input" value="{{ pdf_text|e }}">
+                                    <input type="hidden" name="filename" value="pdf_text.txt">
+                                    <button class="btn small" type="submit">Download</button>
+                                </form>
+                            </div>
+                            <pre id="pdf_text">{{ pdf_text }}</pre>
+                        </div>
+                    {% endif %}
+                </div>
+                </div>
+
+                <div class="right-column">
+                <div class="card">
+                    <h3>Inputs</h3>
+                    <form id="translateForm" action="/translate" method="post">
+                        <label for="text">Source text</label>
+                        <textarea name="text" id="main_text" rows="8" placeholder="Enter or paste text, or click from OCR/PDF output"></textarea>
+                        <label for="dest_lang">Target language</label>
+                        <select name="dest_lang">
+                            <option value="hi">Hindi</option>
+                            <option value="bn">Bengali</option>
+                            <option value="ta">Tamil</option>
+                            <option value="te">Telugu</option>
+                            <option value="ml">Malayalam</option>
+                            <option value="kn">Kannada</option>
+                            <option value="gu">Gujarati</option>
+                            <option value="mr">Marathi</option>
+                            <option value="pa">Punjabi</option>
+                            <option value="ur">Urdu</option>
+                            <option value="en">English</option>
+                        </select>
+                        <div class="actions">
+                            <button class="btn" type="button" onclick="fillFrom('ocr_text')">Use OCR</button>
+                            <button class="btn" type="button" onclick="fillFrom('pdf_text')">Use PDF</button>
+                            <button class="btn primary" type="submit">Translate</button>
+                        </div>
+                    </form>
+
+                    <hr>
+
+                    <form id="summForm" action="/summarize" method="post">
+                        <label for="text">Text to summarize</label>
+                        <textarea name="text" id="summ_text" rows="6" placeholder="Paste text to summarize"></textarea>
+                        <label for="sentences">Number of sentences</label>
+                        <input type="number" name="sentences" value="3" min="1" max="20">
+                        <div class="actions">
+                            <button class="btn" type="button" onclick="fillSummFrom('ocr_text')">Use OCR</button>
+                            <button class="btn" type="button" onclick="fillSummFrom('pdf_text')">Use PDF</button>
+                            <button class="btn primary" type="submit">Summarize</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>Translation</h3>
+                    {% if translated_text %}
+                        <div class="output show">
+                            <div class="output-header">Translation
+                                <button class="btn small" onclick="copyText('translated')">Copy</button>
+                                <form method="post" action="/download_text" style="display:inline">
+                                    <input type="hidden" name="text" id="translated_input" value="{{ translated_text|e }}">
+                                    <input type="hidden" name="filename" value="translation.txt">
+                                    <button class="btn small" type="submit">Download</button>
+                                </form>
+                            </div>
+                            <pre id="translated">{{ translated_text }}</pre>
+                        </div>
+                    {% else %}
+                        <div class="output"><pre id="translated"></pre></div>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h3>Summary</h3>
+                    {% if summary_text %}
+                        <div class="output show">
+                            <div class="output-header">Summary
+                                <button class="btn small" onclick="copyText('summary')">Copy</button>
+                                <form method="post" action="/download_text" style="display:inline">
+                                    <input type="hidden" name="text" id="summary_input" value="{{ summary_text|e }}">
+                                    <input type="hidden" name="filename" value="summary.txt">
+                                    <button class="btn small" type="submit">Download</button>
+                                </form>
+                            </div>
+                            <pre id="summary">{{ summary_text }}</pre>
+                        </div>
+                    {% else %}
+                        <div class="output"><pre id="summary"></pre></div>
+                    {% endif %}
+                </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">Built for demo — adjust Tesseract and Poppler paths via environment variables if needed.</footer>
+
+        <script src="/static/ui.js" defer></script>
+        <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+    </body>
+</html>

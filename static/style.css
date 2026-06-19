@@ -1,0 +1,76 @@
+:root{
+  --bg:#0f1724;
+  --card:#0b1220;
+  --accent:#1ea7fd;
+  --muted:#9aa6b2;
+  --glass: rgba(255,255,255,0.04);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: linear-gradient(180deg,#071124 0%, #071b2b 60%);
+  color:#e6eef6;
+  -webkit-font-smoothing:antialiased;
+}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 28px;background:linear-gradient(90deg, rgba(30,167,253,0.12), rgba(30,167,253,0.02));
+  border-bottom:1px solid rgba(255,255,255,0.03);
+}
+.brand{font-weight:700;font-size:1.25rem;color:var(--accent)}
+.tag{color:var(--muted);font-size:0.9rem}
+.wrap{max-width:1100px;margin:28px auto;padding:20px}
+  .cards{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}
+  .left-column{display:flex;flex-direction:column;gap:18px}
+  .right-column{display:flex;flex-direction:column;gap:18px}
+  .translate-card{padding:24px}
+  .translate-card h3{font-size:1.3rem}
+  .translate-actions{display:flex;justify-content:space-between;align-items:center}
+  .translate-actions .left-actions{display:flex;gap:8px}
+.card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+.card h3{margin:0 0 12px 0;color:var(--accent)}
+input[type=file], input[type=number], textarea, select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);background:var(--glass);color:inherit}
+  .translate-card{padding:24px}
+  .translate-card textarea{min-height:220px}
+.actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);padding:8px 12px;border-radius:8px;cursor:pointer}
+.btn.small{padding:6px 8px;font-size:0.85rem}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#66c2ff);color:#042033;border:none}
+.output{margin-top:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:8px;}
+.output-header{display:flex;align-items:center;justify-content:space-between;font-weight:600;margin-bottom:8px}
+pre{white-space:pre-wrap;word-wrap:break-word;background:transparent;padding:8px;margin:0;color:#dceeff}
+.flash{margin-bottom:12px}
+.flash-item{background:#2e1a2b;padding:10px;border-radius:6px;color:#ffdede}
+.footer{text-align:center;color:var(--muted);margin:24px 0}
+
+/* status panel removed */
+
+@media (max-width:420px){
+  .actions{flex-direction:column}
+}
+
+@media (max-width:900px){
+  .cards{grid-template-columns:1fr}
+  .left-column{order:1}
+  .right-column{order:2}
+  .translate-card textarea{min-height:200px}
+}
+
+/* Enhance translate card, buttons, outputs, and add toasts */
+.translate-card{transition:transform .18s ease, box-shadow .18s ease}
+.translate-card textarea{min-height:260px;font-size:1rem;line-height:1.5}
+.card:hover{transform:translateY(-6px);box-shadow:0 12px 30px rgba(2,6,23,0.75)}
+.btn.primary{box-shadow:0 6px 18px rgba(30,167,253,0.08);transition:transform .12s ease, box-shadow .12s ease}
+.btn.primary:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(30,167,253,0.12)}
+.btn.loading{opacity:0.85}
+.btn.loading:after{content:'';display:inline-block;margin-left:8px;width:14px;height:14px;border-radius:50%;border:2px solid rgba(4,32,51,0.2);border-top-color:#042033;animation:spin .8s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.output{opacity:0;transform:translateY(6px);transition:opacity .28s ease, transform .28s ease}
+.output.show{opacity:1;transform:none}
+
+/* Toasts */
+#toast-container{position:fixed;right:20px;bottom:20px;z-index:10000;display:flex;flex-direction:column;gap:8px}
+.toast{background:linear-gradient(180deg,#0b1724,#0f2636);color:#e6eef6;padding:10px 14px;border-radius:8px;box-shadow:0 8px 20px rgba(2,6,23,0.5);opacity:0;transform:translateY(8px);transition:opacity .18s ease, transform .18s ease}
+.toast.visible{opacity:1;transform:none}
+  /* legacy rules removed */

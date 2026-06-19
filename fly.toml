@@ -1,0 +1,18 @@
+[app]
+  # Name chosen earlier by fly launch; change if you prefer a different name
+  app = "mt-summarizer-project"
+
+[build]
+  image = ""
+
+[env]
+  # Optional: specify environment variables here, or set them on Fly dashboard/secrets
+  # TESSERACT_CMD = "/usr/bin/tesseract"
+  # POPPLER_PATH = "/usr/bin"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+
+[deploy]
+  release_command = ""
